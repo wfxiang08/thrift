@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements. See the NOTICE file
@@ -29,7 +30,7 @@ from cStringIO import StringIO
 
 from TTransport import *
 
-
+# 通过HTTP协议和服务器通信
 class THttpClient(TTransportBase):
   """Http implementation of TTransport base."""
 

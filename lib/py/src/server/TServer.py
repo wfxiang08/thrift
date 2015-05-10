@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements. See the NOTICE file
@@ -31,6 +32,14 @@ from thrift.protocol import TBinaryProtocol
 from thrift.transport import TTransport
 
 
+"""
+transport = TSocket.TServerSocket(port=9090) # 负责连接
+tfactory = TTransport.TBufferedTransportFactory()
+pfactory = TBinaryProtocol.TBinaryProtocolFactory()
+
+server = TServer.TSimpleServer(processor, transport, tfactory, pfactory)
+"""
+
 class TServer:
   """Base interface for a server, which must have a serve() method.
 
@@ -42,6 +51,9 @@ class TServer:
       inputProtocolFactory, outputProtocolFactory)
   """
   def __init__(self, *args):
+    # 弄清楚 processor/server_transport, factory1, factory2, protocol1, protocol2)之间的关系
+    # TServer解决了初始化参数的问题
+    #
     if (len(args) == 2):
       self.__initArgs__(args[0], args[1],
                         TTransport.TTransportFactoryBase(),
@@ -67,22 +79,31 @@ class TServer:
     pass
 
 
+# 用于测试(一次只处理一个连接)
 class TSimpleServer(TServer):
-  """Simple single-threaded server that just pumps around one transport."""
+  """
+  Simple single-threaded server that just pumps around one transport.
+  """
 
   def __init__(self, *args):
     TServer.__init__(self, *args)
 
   def serve(self):
+    # 开始监听
     self.serverTransport.listen()
+    # 准备接受请求
     while True:
       client = self.serverTransport.accept()
       if not client:
         continue
+
+      # 接收到请求之后，获取输入、输出
       itrans = self.inputTransportFactory.getTransport(client)
       otrans = self.outputTransportFactory.getTransport(client)
       iprot = self.inputProtocolFactory.getProtocol(itrans)
       oprot = self.outputProtocolFactory.getProtocol(otrans)
+
+      # 然后一次只服务一个对象?
       try:
         while True:
           self.processor.process(iprot, oprot)
@@ -94,7 +115,7 @@ class TSimpleServer(TServer):
       itrans.close()
       otrans.close()
 
-
+# 通过Thread来处理一个连接
 class TThreadedServer(TServer):
   """Threaded server that spawns a new thread per each connection."""
 
@@ -109,6 +130,7 @@ class TThreadedServer(TServer):
         client = self.serverTransport.accept()
         if not client:
           continue
+        # 通过Thread来处理一个连接(传统做法)
         t = threading.Thread(target=self.handle, args=(client,))
         t.setDaemon(self.daemon)
         t.start()
@@ -133,7 +155,7 @@ class TThreadedServer(TServer):
     itrans.close()
     otrans.close()
 
-
+# Queue + 10 threads(不太支持长连接)
 class TThreadPoolServer(TServer):
   """Server with a fixed size pool of threads which service requests."""
 
@@ -175,6 +197,7 @@ class TThreadPoolServer(TServer):
 
   def serve(self):
     """Start a fixed number of worker threads and put client into a queue"""
+    # 创建一个线程池(10个线程)
     for i in range(self.threads):
       try:
         t = threading.Thread(target=self.serveThread)
@@ -184,6 +207,7 @@ class TThreadPoolServer(TServer):
         logger.exception(x)
 
     # Pump the socket for clients
+    # 新来的Client放入Queue, 然后各个线程分别处理一个Client, 知道处理完毕(不支持长连接，否则某些连接始终得不到处理)
     self.serverTransport.listen()
     while True:
       try:
@@ -194,7 +218,7 @@ class TThreadPoolServer(TServer):
       except Exception as x:
         logger.exception(x)
 
-
+# 和 TThreadedServer 类似，只是通过fork进程来处理新来的请求(进程复用? 但是似乎对长连接的支持不太友好)
 class TForkingServer(TServer):
   """A Thrift server that forks a new process for each request
 
@@ -224,6 +248,7 @@ class TForkingServer(TServer):
       client = self.serverTransport.accept()
       if not client:
         continue
+      # 来一个请求，fork一个进程
       try:
         pid = os.fork()
 

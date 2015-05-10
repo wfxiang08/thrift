@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements. See the NOTICE file
@@ -28,6 +29,7 @@ except:
 
 
 class TBase(object):
+  # http://stackoverflow.com/questions/472000/python-slots
   __slots__ = []
 
   def __repr__(self):
@@ -38,6 +40,7 @@ class TBase(object):
   def __eq__(self, other):
     if not isinstance(other, self.__class__):
       return False
+    # 所有的属性相同，则认为TBase对象相同
     for attr in self.__slots__:
       my_val = getattr(self, attr)
       other_val = getattr(other, attr)

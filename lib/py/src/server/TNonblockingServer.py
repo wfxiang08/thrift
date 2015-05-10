@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements. See the NOTICE file
@@ -21,7 +22,7 @@
 The main idea of the server is to receive and send requests
 only from the main thread.
 
-The thread poool should be sized for concurrent tasks, not
+The thread pool should be sized for concurrent tasks, not
 maximum connections
 """
 import threading
@@ -59,6 +60,11 @@ class Worker(threading.Thread):
                 logger.exception("Exception while processing request")
                 callback(False, '')
 
+# 同一个Connection的状态:
+# 事情处理完毕了，状态为 WAIT_LEN, 等待下一次请求
+# WAIT_LEN获取到输入的长度之后，则进入 WAIT_MESSAGE
+# WAIT_MESSAGE 状态完成之后，就需要交给Handler处理数据
+# SEND_ANSWER 负责返回数据给Client, 数据没有完全返回之间，Client不会发送新的请求
 WAIT_LEN = 0
 WAIT_MESSAGE = 1
 WAIT_PROCESS = 2
@@ -101,6 +107,7 @@ class Connection:
     """
     def __init__(self, new_socket, wake_up):
         self.socket = new_socket
+        # blocking设置为False
         self.socket.setblocking(False)
         self.status = WAIT_LEN
         self.len = 0
@@ -138,6 +145,7 @@ class Connection:
     @socket_exception
     def read(self):
         """Reads data from stream and switch state."""
+        # 解码数据，并且进行状态机的状态切换
         assert self.status in (WAIT_LEN, WAIT_MESSAGE)
         if self.status == WAIT_LEN:
             self._read_len()
@@ -181,10 +189,13 @@ class Connection:
         The one wakes up main thread.
         """
         assert self.status == WAIT_PROCESS
+
+        # 如果出现问题，则关闭connection
         if not all_ok:
             self.close()
             self.wake_up()
             return
+
         self.len = ''
         if len(message) == 0:
             # it was a oneway request, do not write answer
@@ -220,7 +231,7 @@ class Connection:
         self.status = CLOSED
         self.socket.close()
 
-
+# 和TServer的模型不一样
 class TNonblockingServer:
     """Non-blocking server."""
 
@@ -251,6 +262,10 @@ class TNonblockingServer:
         """Prepares server for serve requests."""
         if self.prepared:
             return
+
+        # prepare做啥呢?
+        # 启动sockets和threads?
+        #
         self.socket.listen()
         for _ in xrange(self.threads):
             thread = Worker(self.tasks)
@@ -288,6 +303,7 @@ class TNonblockingServer:
 
     def _select(self):
         """Does select on open connections."""
+        # readable分别是什么?
         readable = [self.socket.handle.fileno(), self._read.fileno()]
         writable = []
         for i, connection in self.clients.items():
@@ -305,25 +321,29 @@ class TNonblockingServer:
         WARNING! You must call prepare() BEFORE calling handle()
         """
         assert self.prepared, "You have to call prepare before handle"
+
+        # 读取可以进行读写的对象?
         rset, wset, xset = self._select()
         for readable in rset:
             if readable == self._read.fileno():
                 # don't care i just need to clean readable flag
                 self._read.recv(1024)
             elif readable == self.socket.handle.fileno():
+                # 添加新的Client
                 client = self.socket.accept().handle
-                self.clients[client.fileno()] = Connection(client,
-                                                           self.wake_up)
+                self.clients[client.fileno()] = Connection(client, self.wake_up)
             else:
+                # 其他的readable, 主要就是各个connection
                 connection = self.clients[readable]
                 connection.read()
                 if connection.status == WAIT_PROCESS:
+                    # 通过协议包解析出一个完整的数据，交给processor
                     itransport = TTransport.TMemoryBuffer(connection.message)
                     otransport = TTransport.TMemoryBuffer()
                     iprot = self.in_protocol.getProtocol(itransport)
                     oprot = self.out_protocol.getProtocol(otransport)
-                    self.tasks.put([self.processor, iprot, oprot,
-                                    otransport, connection.ready])
+                    #
+                    self.tasks.put([self.processor, iprot, oprot, otransport, connection.ready])
         for writeable in wset:
             self.clients[writeable].write()
         for oob in xset:

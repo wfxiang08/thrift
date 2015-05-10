@@ -159,8 +159,7 @@ class TTornadoServer(tcpserver.TCPServer):
 
         self._processor = processor
         self._iprot_factory = iprot_factory
-        self._oprot_factory = (oprot_factory if oprot_factory is not None
-                               else iprot_factory)
+        self._oprot_factory = (oprot_factory if oprot_factory is not None else iprot_factory)
 
     @gen.coroutine
     def handle_stream(self, stream, address):

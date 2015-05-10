@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements. See the NOTICE file
@@ -24,12 +25,14 @@ import sys
 
 from TTransport import *
 
+# 设计上怎么感觉和Zero-RPC和类似呢?
 
 class TSocketBase(TTransportBase):
   def _resolveAddr(self):
+    # 如何解析地址呢?
+    # unix_socket和inet address
     if self._unix_socket is not None:
-      return [(socket.AF_UNIX, socket.SOCK_STREAM, None, None,
-               self._unix_socket)]
+      return [(socket.AF_UNIX, socket.SOCK_STREAM, None, None, self._unix_socket)]
     else:
       return socket.getaddrinfo(self.host,
                                 self.port,
@@ -43,7 +46,7 @@ class TSocketBase(TTransportBase):
       self.handle.close()
       self.handle = None
 
-
+# Client端的Socket的实现
 class TSocket(TSocketBase):
   """Socket implementation of TTransport base."""
 
@@ -70,17 +73,20 @@ class TSocket(TSocketBase):
     return self.handle is not None
 
   def setTimeout(self, ms):
+    # timeout以s为单位
     if ms is None:
       self._timeout = None
     else:
       self._timeout = ms / 1000.0
 
+    # handle?
     if self.handle is not None:
       self.handle.settimeout(self._timeout)
 
   def open(self):
     try:
       res0 = self._resolveAddr()
+      # 绑定每一个地址, 直到成功一个? 最终也只有一个Handler
       for res in res0:
         self.handle = socket.socket(res[0], res[1])
         self.handle.settimeout(self._timeout)
@@ -138,6 +144,10 @@ class TSocket(TSocketBase):
     pass
 
 
+# 服务器端的Socket
+# 一方面，绑定参数的设置
+# 另一方面: accept等工作的实现
+#
 class TServerSocket(TSocketBase, TServerTransportBase):
   """Socket implementation of TServerTransport base."""
 
@@ -149,6 +159,10 @@ class TServerSocket(TSocketBase, TServerTransportBase):
     self.handle = None
 
   def listen(self):
+    """
+    实现 服务器端的socket的listen
+    :return:
+    """
     res0 = self._resolveAddr()
     socket_family = self._socket_family == socket.AF_UNSPEC and socket.AF_INET6 or self._socket_family
     for res in res0:
@@ -168,6 +182,7 @@ class TServerSocket(TSocketBase, TServerTransportBase):
 
     self.handle = socket.socket(res[0], res[1])
     self.handle.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    # timeout怎么设置为无限大?
     if hasattr(self.handle, 'settimeout'):
       self.handle.settimeout(None)
     self.handle.bind(res[4])
@@ -175,6 +190,8 @@ class TServerSocket(TSocketBase, TServerTransportBase):
 
   def accept(self):
     client, addr = self.handle.accept()
+
+    # 将client转换成为TSocket
     result = TSocket()
     result.setHandle(client)
     return result

@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements. See the NOTICE file
@@ -56,18 +57,19 @@ class THttpServer(TServer.TServer):
     if outputProtocolFactory is None:
       outputProtocolFactory = inputProtocolFactory
 
-    TServer.TServer.__init__(self, processor, None, None, None,
-        inputProtocolFactory, outputProtocolFactory)
+    TServer.TServer.__init__(self, processor, None, None, None, inputProtocolFactory, outputProtocolFactory)
 
     thttpserver = self
 
     class RequestHander(BaseHTTPServer.BaseHTTPRequestHandler):
       def do_POST(self):
+        # 走Http协议? 一次处理一个请求
         # Don't care about the request path.
         itrans = TTransport.TFileObjectTransport(self.rfile)
         otrans = TTransport.TFileObjectTransport(self.wfile)
-        itrans = TTransport.TBufferedTransport(
-          itrans, int(self.headers['Content-Length']))
+
+        # 为输入数据添加Buffer
+        itrans = TTransport.TBufferedTransport(itrans, int(self.headers['Content-Length']))
         otrans = TTransport.TMemoryBuffer()
         iprot = thttpserver.inputProtocolFactory.getProtocol(itrans)
         oprot = thttpserver.outputProtocolFactory.getProtocol(otrans)
@@ -84,4 +86,5 @@ class THttpServer(TServer.TServer):
     self.httpd = server_class(server_address, RequestHander)
 
   def serve(self):
+    # 启动http server
     self.httpd.serve_forever()

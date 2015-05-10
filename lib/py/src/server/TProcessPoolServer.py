@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements. See the NOTICE file
@@ -57,6 +58,9 @@ class TProcessPoolServer(TServer):
 
         while self.isRunning.value:
             try:
+                # 读取一个Client, 然后Server?
+                # 触发器: accept
+                # 长连接情况下似乎没有这个选项了
                 client = self.serverTransport.accept()
                 if not client:
                   continue
@@ -92,6 +96,7 @@ class TProcessPoolServer(TServer):
         # first bind and listen to the port
         self.serverTransport.listen()
 
+        # 首先fork指定数量的进程
         # fork the children
         for i in range(self.numWorkers):
             try:
@@ -103,6 +108,7 @@ class TProcessPoolServer(TServer):
                 logger.exception(x)
 
         # wait until the condition is set by stop()
+        # 主进程就是等待结束，处理各种异常
         while True:
             self.stopCondition.acquire()
             try:
