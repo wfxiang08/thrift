@@ -130,6 +130,7 @@ func (p *TSimpleServer) AcceptLoop() error {
 			return err
 		}
 		if client != nil {
+			// 通过go func来处理请求
 			go func() {
 				if err := p.processRequests(client); err != nil {
 					log.Println("error processing request:", err)
@@ -171,6 +172,8 @@ func (p *TSimpleServer) processRequests(client TTransport) error {
 	if outputTransport != nil {
 		defer outputTransport.Close()
 	}
+
+	// 不停地处理请求
 	for {
 		ok, err := processor.Process(inputProtocol, outputProtocol)
 		if err, ok := err.(TTransportException); ok && err.TypeId() == END_OF_FILE {
