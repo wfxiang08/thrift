@@ -84,14 +84,21 @@ class CalculatorHandler:
 # 具体的实现，不是自动生成的代码
 handler = CalculatorHandler()
 
-# 接口的实现
+# Processor的作用
+# 从Protocol层读取输入数据，然后调用 Handler的方法，然后将结果返回
 processor = Calculator.Processor(handler)
 
 # 网络的读写
 transport = TSocket.TServerSocket(port=9090)
+
+# 为具体的transport提供额外的功能支持，例如: buffer
+# TTransport定义了网络层应该有的接口
+# 但是网络层的实现一般离开不了Socket, 因此TSocket作为底层的基石
+#
 tfactory = TTransport.TBufferedTransportFactory()
 
 # 协议： 数据的序列化
+# 负责结合: transport和协议
 pfactory = TBinaryProtocol.TBinaryProtocolFactory()
 
 server = TServer.TSimpleServer(processor, transport, tfactory, pfactory)

@@ -46,6 +46,7 @@ try:
   client = Calculator.Client(protocol)
 
   # Connect!
+  # 后面应该是一个长连接了，所有的事情都在一个Socket上执行
   transport.open()
 
   client.ping()

@@ -18,6 +18,14 @@ try:
 except:
   fastbinary = None
 
+
+# class TMessageType:
+#   CALL = 1  表示函数调用
+#   REPLY = 2 表示返回结果
+#   EXCEPTION = 3 表示出现异常
+#   ONEWAY = 4 表示调用者不期待返回结果
+
+
 # 定义了接口
 class Iface(shared.SharedService.Iface):
   """
@@ -191,6 +199,11 @@ class Client(shared.SharedService.Client, Iface):
     self._oprot.writeMessageEnd()
     self._oprot.trans.flush()
 
+#
+# Processor是做什么?
+#
+# 为什么要是实现Iface
+#
 class Processor(shared.SharedService.Processor, Iface, TProcessor):
   def __init__(self, handler):
     shared.SharedService.Processor.__init__(self, handler)
@@ -201,10 +214,16 @@ class Processor(shared.SharedService.Processor, Iface, TProcessor):
 
   # def process(iprot, oprot):
   def process(self, iprot, oprot):
+    # 为什么process的接口定义变化了，多了一个self?
+    # 和基类的实现一样, Why?
+    #
     (name, type, seqid) = iprot.readMessageBegin()
     if name not in self._processMap:
+      # skip作用？
+      # 能否直接读取所有的Message, 而不考虑Message的细节（提供给Proxy使用?)
       iprot.skip(TType.STRUCT)
       iprot.readMessageEnd()
+
       x = TApplicationException(TApplicationException.UNKNOWN_METHOD, 'Unknown function %s' % (name))
       oprot.writeMessageBegin(name, TMessageType.EXCEPTION, seqid)
       x.write(oprot)
@@ -220,7 +239,10 @@ class Processor(shared.SharedService.Processor, Iface, TProcessor):
     args.read(iprot)
     iprot.readMessageEnd()
     result = ping_result()
+
     self._handler.ping()
+
+    # 返回数据
     oprot.writeMessageBegin("ping", TMessageType.REPLY, seqid)
     result.write(oprot)
     oprot.writeMessageEnd()
@@ -231,7 +253,9 @@ class Processor(shared.SharedService.Processor, Iface, TProcessor):
     args.read(iprot)
     iprot.readMessageEnd()
     result = add_result()
+
     result.success = self._handler.add(args.num1, args.num2)
+
     oprot.writeMessageBegin("add", TMessageType.REPLY, seqid)
     result.write(oprot)
     oprot.writeMessageEnd()
@@ -242,10 +266,14 @@ class Processor(shared.SharedService.Processor, Iface, TProcessor):
     args.read(iprot)
     iprot.readMessageEnd()
     result = calculate_result()
+
+    # 处理异常
     try:
       result.success = self._handler.calculate(args.logid, args.w)
     except InvalidOperation as ouch:
       result.ouch = ouch
+
+    # 返回结果
     oprot.writeMessageBegin("calculate", TMessageType.REPLY, seqid)
     result.write(oprot)
     oprot.writeMessageEnd()
@@ -255,7 +283,13 @@ class Processor(shared.SharedService.Processor, Iface, TProcessor):
     args = zip_args()
     args.read(iprot)
     iprot.readMessageEnd()
+
+    # 读取完毕消息
+
+    # 处理zip
     self._handler.zip()
+
+    # ONEWAY不期待返回结果
     return
 
 

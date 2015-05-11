@@ -94,12 +94,16 @@ class Client(Iface):
 
 class Processor(Iface, TProcessor):
   def __init__(self, handler):
+    # 如何注册handler呢?
     self._handler = handler
     self._processMap = {}
+    # Method如何处理呢?
     self._processMap["getStruct"] = Processor.process_getStruct
 
   def process(self, iprot, oprot):
     (name, type, seqid) = iprot.readMessageBegin()
+
+    # 处理异常的函数调用
     if name not in self._processMap:
       iprot.skip(TType.STRUCT)
       iprot.readMessageEnd()
@@ -108,8 +112,10 @@ class Processor(Iface, TProcessor):
       x.write(oprot)
       oprot.writeMessageEnd()
       oprot.trans.flush()
+      # 返回None/False
       return
     else:
+      # 获取对应的processor
       self._processMap[name](self, seqid, iprot, oprot)
     return True
 
@@ -118,6 +124,7 @@ class Processor(Iface, TProcessor):
     args.read(iprot)
     iprot.readMessageEnd()
     result = getStruct_result()
+    # handler的调用
     result.success = self._handler.getStruct(args.key)
     oprot.writeMessageBegin("getStruct", TMessageType.REPLY, seqid)
     result.write(oprot)

@@ -93,19 +93,24 @@ class TSimpleServer(TServer):
     self.serverTransport.listen()
     # 准备接受请求
     while True:
+      # TSocket.TSocket
       client = self.serverTransport.accept()
       if not client:
         continue
 
       # 接收到请求之后，获取输入、输出
+      # 为 Socket提供额外的功能
       itrans = self.inputTransportFactory.getTransport(client)
       otrans = self.outputTransportFactory.getTransport(client)
+
+      # 添加协议控制
       iprot = self.inputProtocolFactory.getProtocol(itrans)
       oprot = self.outputProtocolFactory.getProtocol(otrans)
 
       # 然后一次只服务一个对象?
       try:
         while True:
+          # 调用Processor来处理数据
           self.processor.process(iprot, oprot)
       except TTransport.TTransportException as tx:
         pass

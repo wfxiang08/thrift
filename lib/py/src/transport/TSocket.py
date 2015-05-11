@@ -46,7 +46,11 @@ class TSocketBase(TTransportBase):
       self.handle.close()
       self.handle = None
 
-# Client端的Socket的实现
+#
+# 使用场合
+# 1. Client端的Socket的实现
+# 2. Server端的Connection的实现
+#
 class TSocket(TSocketBase):
   """Socket implementation of TTransport base."""
 
