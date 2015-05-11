@@ -21,7 +21,7 @@
 from TProtocol import *
 from struct import pack, unpack
 
-
+# 二进制协议(Thrift协议)
 class TBinaryProtocol(TProtocolBase):
   """Binary implementation of the Thrift protocol driver."""
 
@@ -39,10 +39,13 @@ class TBinaryProtocol(TProtocolBase):
 
   def __init__(self, trans, strictRead=False, strictWrite=True):
     TProtocolBase.__init__(self, trans)
+
     self.strictRead = strictRead
     self.strictWrite = strictWrite
 
   def writeMessageBegin(self, name, type, seqid):
+    # 两个格式的消息
+    # strictWrite 默认为True, 多了一个协议的版本信息
     if self.strictWrite:
       self.writeI32(TBinaryProtocol.VERSION_1 | type)
       self.writeString(name)
@@ -62,6 +65,13 @@ class TBinaryProtocol(TProtocolBase):
     pass
 
   def writeFieldBegin(self, name, type, id):
+    """
+    如何进行WriteField呢？ 类型/id
+    :param name:
+    :param type:
+    :param id:
+    :return:
+    """
     self.writeByte(type)
     self.writeI16(id)
 
@@ -72,6 +82,13 @@ class TBinaryProtocol(TProtocolBase):
     self.writeByte(TType.STOP)
 
   def writeMapBegin(self, ktype, vtype, size):
+    """
+    注意：Thrift中的数据类型必须尽可能简单，不要使用通用类型的Map, 例如: 一个dict返回所有可能的数据
+    :param ktype:
+    :param vtype:
+    :param size:
+    :return:
+    """
     self.writeByte(ktype)
     self.writeByte(vtype)
     self.writeI32(size)
@@ -153,6 +170,7 @@ class TBinaryProtocol(TProtocolBase):
     pass
 
   def readFieldBegin(self):
+    # 开始一个Field的读取，得到了type才知道下一步该做什么
     type = self.readByte()
     if type == TType.STOP:
       return (None, type, 0)

@@ -25,7 +25,7 @@
 .*project
 junit*.properties
 .idea
-gen-*
+# gen-*
 Makefile
 Makefile.in
 aclocal.m4

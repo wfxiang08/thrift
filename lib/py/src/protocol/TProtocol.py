@@ -36,7 +36,12 @@ class TProtocolException(TException):
     TException.__init__(self, message)
     self.type = type
 
-
+# 所有的协议的基类
+# 作用在网络层 trans 上
+# 负责 Message, Struct, Field, Map, List, Set, Bool, 以及字符串，int等基本数据的读写
+#
+# 如何和MsgPack结合起来呢?
+#
 class TProtocolBase:
   """Base class for Thrift protocol driver."""
 

@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements. See the NOTICE file
@@ -147,9 +148,12 @@ class LookaheadReader():
     return self.data
 
 class TJSONProtocolBase(TProtocolBase):
-
+  """
+  TJSONProtocolBase似乎也没有实现全部的方法，而只是添加了一些新的接口
+  """
   def __init__(self, trans):
     TProtocolBase.__init__(self, trans)
+    # Reset Context
     self.resetWriteContext()
     self.resetReadContext()
 
@@ -158,6 +162,7 @@ class TJSONProtocolBase(TProtocolBase):
     self.contextStack = [self.context]
 
   def resetReadContext(self):
+    # 重复工作
     self.resetWriteContext()
     self.reader = LookaheadReader(self)
 
@@ -186,6 +191,7 @@ class TJSONProtocolBase(TProtocolBase):
   def writeJSONBase64(self, binary):
     self.context.write()
     self.trans.write(QUOTE)
+    # base64
     self.trans.write(base64.b64encode(binary))
     self.trans.write(QUOTE)
 
@@ -312,10 +318,17 @@ class TJSONProtocolBase(TProtocolBase):
 
 
 class TJSONProtocol(TJSONProtocolBase):
-
+  """
+    实现 TJSONProtocolBase 中未实现的方法
+  """
   def readMessageBegin(self):
     self.resetReadContext()
+
+    # JSON Protocol的定义
+    # Message的定义:
+    # [VERSION, name, type, seqid, ...]
     self.readJSONArrayStart()
+
     if self.readJSONInteger() != VERSION:
       raise TProtocolException(TProtocolException.BAD_VERSION,
                                "Message contained bad version.")
@@ -328,6 +341,10 @@ class TJSONProtocol(TJSONProtocolBase):
     self.readJSONArrayEnd()
 
   def readStructBegin(self):
+    """
+    Struct通过JSON对象来表示
+    :return:
+    """
     self.readJSONObjectStart()
 
   def readStructEnd(self):
@@ -361,7 +378,13 @@ class TJSONProtocol(TJSONProtocolBase):
     self.readJSONArrayEnd()
 
   def readCollectionBegin(self):
+    """
+    读取一个Collection/Array
+    :return:
+    """
     self.readJSONArrayStart()
+
+    # 返回数组的信息
     elemType = JTYPES[self.readJSONString(False)]
     size = self.readJSONInteger()
     return (elemType, size)
@@ -393,6 +416,9 @@ class TJSONProtocol(TJSONProtocolBase):
     return self.readJSONBase64()
 
   def writeMessageBegin(self, name, request_type, seqid):
+    """
+    开始一个消息: Version, Name, Request_Type, seqid
+    """
     self.resetWriteContext()
     self.writeJSONArrayStart()
     self.writeJSONNumber(VERSION)
@@ -564,6 +590,8 @@ class TSimpleJSONProtocol(TJSONProtocolBase):
 
 
 class TSimpleJSONProtocolFactory(object):
-
+    """
+        Factory: 通过协议将trans层进行封装
+    """
     def getProtocol(self, trans):
         return TSimpleJSONProtocol(trans)
