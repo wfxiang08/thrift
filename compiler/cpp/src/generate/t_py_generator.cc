@@ -287,6 +287,7 @@ private:
   std::string module_;
 };
 
+#define PYTHON_ENCODING "# -*- coding:utf-8 -*-"
 /**
  * Prepares for file generation by opening up the necessary file output
  * streams.
@@ -302,6 +303,8 @@ void t_py_generator::init_generator() {
     // TODO: Do better error checking here.
     MKDIR(package_dir_.c_str());
     std::ofstream init_py((package_dir_ + "/__init__.py").c_str(), std::ios_base::app);
+    init_py << PYTHON_ENCODING << endl;
+    
     init_py.close();
     if (module.empty()) {
       break;
@@ -321,9 +324,11 @@ void t_py_generator::init_generator() {
   // Make output file
   string f_types_name = package_dir_ + "/" + "ttypes.py";
   f_types_.open(f_types_name.c_str());
+  f_types_ << PYTHON_ENCODING << endl;
 
   string f_consts_name = package_dir_ + "/" + "constants.py";
   f_consts_.open(f_consts_name.c_str());
+  f_consts_ << PYTHON_ENCODING << endl;
 
   string f_init_name = package_dir_ + "/__init__.py";
   ofstream f_init;
@@ -937,6 +942,8 @@ void t_py_generator::generate_service(t_service* tservice) {
   string f_service_name = package_dir_ + "/" + service_name_ + ".py";
   f_service_.open(f_service_name.c_str());
 
+  f_service_ << PYTHON_ENCODING << endl;
+
   f_service_ << py_autogen_comment() << endl << py_imports() << endl;
 
   if (tservice->get_extends() != NULL) {
@@ -1391,6 +1398,7 @@ void t_py_generator::generate_service_remote(t_service* tservice) {
   string f_remote_name = package_dir_ + "/" + service_name_ + "-remote";
   ofstream f_remote;
   f_remote.open(f_remote_name.c_str());
+  f_remote << PYTHON_ENCODING << endl;
 
   f_remote << "#!/usr/bin/env python" << endl << py_autogen_comment() << endl << "import sys"
            << endl << "import pprint" << endl << "from urlparse import urlparse" << endl

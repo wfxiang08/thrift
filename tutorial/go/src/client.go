@@ -27,6 +27,7 @@ import (
 )
 
 func handleClient(client *tutorial.CalculatorClient) (err error) {
+	// 实际的函数调用
 	client.Ping()
 	fmt.Println("ping()")
 
@@ -76,24 +77,32 @@ func handleClient(client *tutorial.CalculatorClient) (err error) {
 	return err
 }
 
-func runClient(transportFactory thrift.TTransportFactory, protocolFactory thrift.TProtocolFactory, addr string, secure bool) error {
+func runClient(transportFactory thrift.TTransportFactory, protocolFactory thrift.TProtocolFactory,
+	addr string, secure bool) error {
+
 	var transport thrift.TTransport
 	var err error
+
+	// 暂时不考虑: secure
 	if secure {
 		cfg := new(tls.Config)
 		cfg.InsecureSkipVerify = true
 		transport, err = thrift.NewTSSLSocket(addr, cfg)
 	} else {
+		// 创建普通的Socket
 		transport, err = thrift.NewTSocket(addr)
 	}
 	if err != nil {
 		fmt.Println("Error opening socket:", err)
 		return err
 	}
+
+	// 对Transport进行简单的包装，例如: 添加Buffer等
 	transport = transportFactory.GetTransport(transport)
 	defer transport.Close()
 	if err := transport.Open(); err != nil {
 		return err
 	}
+
 	return handleClient(tutorial.NewCalculatorClientFactory(transport, protocolFactory))
 }

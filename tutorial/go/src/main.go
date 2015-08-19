@@ -43,6 +43,7 @@ func main() {
 
 	flag.Parse()
 
+	// 几种协议的区别?
 	var protocolFactory thrift.TProtocolFactory
 	switch *protocol {
 	case "compact":
@@ -59,6 +60,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	// TransportFactory和Python中的定位是一样的
 	var transportFactory thrift.TTransportFactory
 	if *buffered {
 		transportFactory = thrift.NewTBufferedTransportFactory(8192)
@@ -70,6 +72,7 @@ func main() {
 		transportFactory = thrift.NewTFramedTransportFactory(transportFactory)
 	}
 
+	// 通过命令行的参数来区分Demo是Server还是Client端的?
 	if *server {
 		if err := runServer(transportFactory, protocolFactory, *addr, *secure); err != nil {
 			fmt.Println("error running server:", err)
