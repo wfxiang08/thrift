@@ -288,6 +288,7 @@ private:
 };
 
 #define PYTHON_ENCODING "# -*- coding:utf-8 -*-"
+#define ABSOLUTE_IMPORT "from __future__ import absolute_import"
 /**
  * Prepares for file generation by opening up the necessary file output
  * streams.
@@ -346,7 +347,9 @@ void t_py_generator::init_generator() {
   f_types_ << py_autogen_comment() << endl << py_imports() << endl << render_includes() << endl
            << render_fastbinary_includes() << endl << endl;
 
-  f_consts_ << py_autogen_comment() << endl << py_imports() << endl << "from ttypes import *"
+  
+  
+  f_consts_ << py_autogen_comment() << endl << py_imports() << endl << "from " << module_  << ".ttypes import *"
             << endl << endl;
 }
 
@@ -941,10 +944,12 @@ void t_py_generator::generate_py_struct_required_validator(ofstream& out, t_stru
 void t_py_generator::generate_service(t_service* tservice) {
   string f_service_name = package_dir_ + "/" + service_name_ + ".py";
   f_service_.open(f_service_name.c_str());
-
+  
+  // 添加编码
   f_service_ << PYTHON_ENCODING << endl;
 
-  f_service_ << py_autogen_comment() << endl << py_imports() << endl;
+  // 添加自动生成comments
+  f_service_ << py_autogen_comment() << endl << ABSOLUTE_IMPORT << endl << py_imports() << endl;
 
   if (tservice->get_extends() != NULL) {
     f_service_ << "import "
@@ -952,7 +957,7 @@ void t_py_generator::generate_service(t_service* tservice) {
                << tservice->get_extends()->get_name() << endl;
   }
 
-  f_service_ << "from ttypes import *" << endl << "from thrift.Thrift import TProcessor" << endl
+  f_service_ << "from " << module_  << ".ttypes import *" << endl << "from thrift.Thrift import TProcessor" << endl
              << render_fastbinary_includes() << endl;
 
   if (gen_twisted_) {
