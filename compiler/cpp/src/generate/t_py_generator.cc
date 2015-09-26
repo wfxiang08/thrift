@@ -378,10 +378,10 @@ string t_py_generator::render_fastbinary_includes() {
   } else {
     hdr += "from thrift.transport import TTransport\n"
            "from thrift.protocol import TBinaryProtocol, TProtocol\n"
-           "try:\n"
-           "  from thrift.protocol import fastbinary\n"
-           "except:\n"
-           "  fastbinary = None\n";
+            "try:\n"
+            "  from rpc_thrift.cython.cybinary_protocol import TCyBinaryProtocol\n"
+            "except:\n"
+            "  TCyBinaryProtocol = None\n";
   }
   return hdr;
 }
@@ -803,13 +803,11 @@ void t_py_generator::generate_py_struct_reader(ofstream& out, t_struct* tstruct)
   indent(out) << "def read(self, iprot):" << endl;
   indent_up();
 
-  indent(out) << "if iprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated "
-                 "and isinstance(iprot.trans, TTransport.CReadableTransport) "
-                 "and self.thrift_spec is not None "
-                 "and fastbinary is not None:" << endl;
+  indent(out) << "if iprot.__class__ == TCyBinaryProtocol "
+                 "and self.thrift_spec is not None:"<< endl;
   indent_up();
 
-  indent(out) << "fastbinary.decode_binary(self, iprot.trans, (self.__class__, self.thrift_spec))"
+  indent(out) << "iprot.read_struct(self)"
               << endl;
   indent(out) << "return" << endl;
   indent_down();
@@ -872,13 +870,12 @@ void t_py_generator::generate_py_struct_writer(ofstream& out, t_struct* tstruct)
   indent(out) << "def write(self, oprot):" << endl;
   indent_up();
 
-  indent(out) << "if oprot.__class__ == TBinaryProtocol.TBinaryProtocolAccelerated "
-                 "and self.thrift_spec is not None "
-                 "and fastbinary is not None:" << endl;
+  indent(out) << "if oprot.__class__ == TCyBinaryProtocol "
+                 "and self.thrift_spec is not None:" << endl;
   indent_up();
 
   indent(out)
-      << "oprot.trans.write(fastbinary.encode_binary(self, (self.__class__, self.thrift_spec)))"
+      << "oprot.write_struct(self)"
       << endl;
   indent(out) << "return" << endl;
   indent_down();
