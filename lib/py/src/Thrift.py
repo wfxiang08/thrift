@@ -145,6 +145,7 @@ class TApplicationException(TException):
 
     def read(self, iprot):
         try:
+            # 非标准化的写法
             from rpc_thrift.cython.cybinary_protocol import TCyBinaryProtocol
         except:
             TCyBinaryProtocol = None
@@ -173,6 +174,7 @@ class TApplicationException(TException):
 
     def write(self, oprot):
         try:
+            # 非标准化的写法
             from rpc_thrift.cython.cybinary_protocol import TCyBinaryProtocol
         except:
             TCyBinaryProtocol = None
