@@ -106,6 +106,12 @@ class TApplicationException(TException):
     INVALID_TRANSFORM = 8
     INVALID_PROTOCOL = 9
     UNSUPPORTED_CLIENT_TYPE = 10
+    thrift_spec = (
+        None, # 0
+        (1, TType.STRING, 'message', None, None, ), # 1
+        (2, TType.I32, 'type', None, None, ), # 2
+    )
+
 
     def __init__(self, type=UNKNOWN, message=None):
         TException.__init__(self, message)
@@ -138,6 +144,13 @@ class TApplicationException(TException):
             return 'Default (unknown) TApplicationException'
 
     def read(self, iprot):
+        try:
+            from rpc_thrift.cython.cybinary_protocol import TCyBinaryProtocol
+        except:
+            TCyBinaryProtocol = None
+        if iprot.__class__ == TCyBinaryProtocol and self.thrift_spec is not None:
+            iprot.read_struct(self)
+            return
         iprot.readStructBegin()
         while True:
             (fname, ftype, fid) = iprot.readFieldBegin()
@@ -159,6 +172,13 @@ class TApplicationException(TException):
         iprot.readStructEnd()
 
     def write(self, oprot):
+        try:
+            from rpc_thrift.cython.cybinary_protocol import TCyBinaryProtocol
+        except:
+            TCyBinaryProtocol = None
+        if oprot.__class__ == TCyBinaryProtocol and self.thrift_spec is not None:
+            oprot.write_struct(self)
+            return
         oprot.writeStructBegin('TApplicationException')
         if self.message is not None:
             oprot.writeFieldBegin('message', TType.STRING, 1)
