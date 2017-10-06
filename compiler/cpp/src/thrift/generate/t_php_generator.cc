@@ -1411,15 +1411,15 @@ void t_php_generator::generate_process_function(std::ofstream& out, t_service* t
                               << "TBinaryProtocolAccelerated) && function_exists('thrift_protocol_write_binary');" << endl;
 
   out << indent() << indent() << "if ($bin_accel)" << endl;
-  scope_up(f_service_);
+  scope_up(out); // {
 
   out << indent() << indent() << "thrift_protocol_write_binary($output, '" << tfunction->get_name()
                   << "', "
                   << "TMessageType::REPLY, $result, $seqid, $output->isStrictWrite());" << endl;
 
-  scope_down(out);
+  scope_down(out); // }
   out << indent() << indent() << "else" << endl;
-  scope_up(out);
+  scope_up(out); // {
 
   // Serialize the request header
   if (binary_inline_) {
@@ -1436,11 +1436,7 @@ void t_php_generator::generate_process_function(std::ofstream& out, t_service* t
         << "$output->getTransport()->flush();" << endl;
   }
 
-  scope_down(out);
-
-  // Close function
-  indent_down();
-  out << indent() << indent() << "}" << endl;
+  scope_down(out); // }
 
   // if ($this->output_ instanceof TBinaryProtocol) { xx } else {}
   out << indent() << "} else {"<< endl;
@@ -1448,6 +1444,11 @@ void t_php_generator::generate_process_function(std::ofstream& out, t_service* t
                   << "', "
                   << "TMessageType::REPLY, $result, $seqid, $output->isStrictWrite());" << endl;
   out << indent() << "}"<< endl;
+
+
+  out << indent() << indent() << "}" << endl;
+  // Close function
+  indent_down();
 }
 
 /**
@@ -1736,7 +1737,7 @@ void t_php_generator::generate_service_client(t_service* tservice) {
                << endl;
 
     f_service_client << indent() << "if ($bin_accel)" << endl;
-    scope_up(f_service_client);
+    scope_up(f_service_client); // {
 
     string messageType = (*f_iter)->is_oneway() ? "TMessageType::ONEWAY" : "TMessageType::CALL";
 
@@ -1744,9 +1745,9 @@ void t_php_generator::generate_service_client(t_service* tservice) {
                << (*f_iter)->get_name() << "', " << messageType
                << ", $args, $this->seqid_, $this->output_->isStrictWrite());" << endl;
 
-    scope_down(f_service_client);
+    scope_down(f_service_client); // }
     f_service_client << indent() << "else" << endl;
-    scope_up(f_service_client);
+    scope_up(f_service_client);   // {
 
     // Serialize the request header
     if (binary_inline_) {
@@ -1770,7 +1771,7 @@ void t_php_generator::generate_service_client(t_service* tservice) {
                        << "$this->output_->getTransport()->flush();" << endl;
     }
 
-    scope_down(f_service_client);
+    scope_down(f_service_client); // }
 
     // if ($this->output_ instanceof TBinaryProtocol) { } else {}
     f_service_ << indent() << "} else {"<< endl;
@@ -1810,7 +1811,7 @@ void t_php_generator::generate_service_client(t_service* tservice) {
                        << "if ($bin_accel) $result = thrift_protocol_read_binary($this->input_, '"
                        << resultname << "', $this->input_->isStrictRead());" << endl;
       f_service_client << indent() << "else" << endl;
-      scope_up(f_service_client); // 1-start
+      scope_up(f_service_client); // {
 
 
       f_service_client << indent() << "$rseqid = 0;" << endl << indent() << "$fname = null;" << endl
@@ -1843,7 +1844,7 @@ void t_php_generator::generate_service_client(t_service* tservice) {
         f_service_client << indent() << "$this->input_->readMessageEnd();" << endl;
       }
 
-      scope_down(f_service_client); // 1-end
+      scope_down(f_service_client); // }
 
       // if ($this->output_ instanceof TBinaryProtocol) { xxx } else { xxx }
       f_service_client << indent() << "} else {"<< endl;
