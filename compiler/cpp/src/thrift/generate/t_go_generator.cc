@@ -296,8 +296,8 @@ private:
 
   std::ofstream f_types_;
   std::string f_types_name_;
-  std::ofstream f_consts_;
-  std::string f_consts_name_;
+
+  std::ofstream f_types_model_;
   std::stringstream f_const_values_;
 
   std::string package_name_;
@@ -750,30 +750,12 @@ void t_go_generator::init_generator() {
   f_types_name_ = package_dir_ + "/" + program_name_ + ".go";
   f_types_.open(f_types_name_.c_str());
 
-  f_consts_name_ = package_dir_ + "/" + program_name_ + "-consts.go";
-  f_consts_.open(f_consts_name_.c_str());
-
-  vector<t_service*> services = program_->get_services();
-  vector<t_service*>::iterator sv_iter;
-
-  for (sv_iter = services.begin(); sv_iter != services.end(); ++sv_iter) {
-    string service_dir = package_dir_ + "/" + underscore((*sv_iter)->get_name()) + "-remote";
-    MKDIR(service_dir.c_str());
-  }
+  string model_file = package_dir_ + "/" + program_name_ + "-model.go";
+  f_types_model_.open(model_file.c_str());
 
   // Print header
   f_types_ << go_autogen_comment() << go_package() << render_includes(false);
-
-  f_consts_ << go_autogen_comment() << go_package() << render_includes(true);
-
-  f_const_values_ << endl << "func init() {" << endl;
-
-  // Create file for the GoUnusedProtection__ variable
-  string f_unused_prot_name_ = package_dir_ + "/" + "GoUnusedProtection__.go";
-  ofstream f_unused_prot_;
-  f_unused_prot_.open(f_unused_prot_name_.c_str());
-  f_unused_prot_ << go_autogen_comment() << go_package() << render_import_protection();
-  f_unused_prot_.close();
+  f_types_model_ << go_autogen_comment() << go_package() << render_includes(true);
 }
 
 
@@ -920,14 +902,10 @@ string t_go_generator::go_imports_end() {
  * Closes the type files
  */
 void t_go_generator::close_generator() {
-  f_const_values_ << "}" << endl << endl;
-  f_consts_ << f_const_values_.str();
-
   // Close types and constants files
-  f_consts_.close();
   f_types_.close();
+  f_types_model_.close();
   format_go_output(f_types_name_);
-  format_go_output(f_consts_name_);
 }
 
 /**
@@ -1054,12 +1032,12 @@ void t_go_generator::generate_const(t_const* tconst) {
   t_const_value* value = tconst->get_value();
 
   if (type->is_base_type() || type->is_enum()) {
-    indent(f_consts_) << "const " << name << " = " << render_const_value(type, value, name) << endl;
+    indent(f_types_model_) << "const " << name << " = " << render_const_value(type, value, name) << endl;
   } else {
     f_const_values_ << indent() << name << " = " << render_const_value(type, value, name) << endl
                     << endl;
 
-    f_consts_ << indent() << "var " << name << " " << type_to_go_type(type) << endl;
+    f_types_model_ << indent() << "var " << name << " " << type_to_go_type(type) << endl;
   }
 }
 
@@ -1255,8 +1233,8 @@ void t_go_generator::generate_go_struct_definition(ofstream& out,
   vector<t_field*>::const_iterator m_iter;
 
   std::string tstruct_name(publicize(tstruct->get_name(), is_args || is_result));
-  generate_go_docstring(out, tstruct);
-  out << indent() << "type " << tstruct_name << " struct {" << endl;
+  generate_go_docstring(f_types_model_, tstruct);
+  f_types_model_ << indent() << "type " << tstruct_name << " struct {" << endl;
   /*
      Here we generate the structure specification for the fastbinary codec.
      These specifications have the following structure:
@@ -1298,9 +1276,9 @@ void t_go_generator::generate_go_struct_definition(ofstream& out,
         }
         int last_unused = sorted_keys_pos - 1;
         if (first_unused < last_unused) {
-          indent(out) << "// unused fields # " << first_unused << " to " << last_unused << endl;
+          indent(f_types_model_) << "// unused fields # " << first_unused << " to " << last_unused << endl;
         } else if (first_unused == last_unused) {
-          indent(out) << "// unused field # " << first_unused << endl;
+          indent(f_types_model_) << "// unused field # " << first_unused << endl;
         }
       }
 
@@ -1318,25 +1296,26 @@ void t_go_generator::generate_go_struct_definition(ofstream& out,
       if (it != (*m_iter)->annotations_.end()) {
         gotag = it->second;
       }
-      indent(out) << publicize((*m_iter)->get_name()) << " " << goType << " `thrift:\""
+      indent(f_types_model_) << publicize((*m_iter)->get_name()) << " " << goType << " `thrift:\""
                   << escape_string((*m_iter)->get_name()) << "," << sorted_keys_pos;
       if ((*m_iter)->get_req() == t_field::T_REQUIRED) {
-        out << ",required";
+        f_types_model_ << ",required";
       }
 
-      out << "\" " << gotag << "`" << endl;
+      f_types_model_ << "\" " << gotag << "`" << endl;
       sorted_keys_pos++;
     }
   } else {
     for (m_iter = members.begin(); m_iter != members.end(); ++m_iter) {
       // This fills in default values, as opposed to nulls
-      out << indent() << publicize((*m_iter)->get_name()) << " "
+      f_types_model_ << indent() << publicize((*m_iter)->get_name()) << " "
           << type_to_go_type((*m_iter)->get_type()) << endl;
     }
   }
 
   indent_down();
-  out << indent() << "}" << endl << endl;
+  f_types_model_ << indent() << "}" << endl << endl;
+
   out << indent() << "func New" << tstruct_name << "() *" << tstruct_name << " {" << endl;
   out << indent() << "  return &";
   generate_go_struct_initializer(out, tstruct, is_result || is_args);
