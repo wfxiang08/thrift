@@ -801,6 +801,8 @@ void t_go_generator::init_generator() {
     // Print header
     f_types_ << go_autogen_comment() << go_package() << render_includes(false);
     f_types_model_ << go_autogen_comment() << go_package() << render_includes(true);
+    // include时会相互依赖
+    f_types_model_ << render_import_protection();
 }
 
 
