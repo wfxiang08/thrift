@@ -2669,10 +2669,10 @@ void t_go_generator::generate_service_server(t_service *tservice) {
     string self(tmp("self"));
 
     if (extends_processor.empty()) {
-        f_types_ << indent() << "type " << serviceName << "Processor struct {" << endl;
-        f_types_ << indent() << "  processorMap map[string]thrift.TProcessorFunction" << endl;
-        f_types_ << indent() << "  handler " << serviceName << endl;
-        f_types_ << indent() << "}" << endl << endl;
+        f_types_model_ << indent() << "type " << serviceName << "Processor struct {" << endl;
+        f_types_model_ << indent() << "  processorMap map[string]thrift.TProcessorFunction" << endl;
+        f_types_model_ << indent() << "  handler " << serviceName << endl;
+        f_types_model_ << indent() << "}" << endl << endl;
         f_types_ << indent() << "func (p *" << serviceName
         << "Processor) AddToProcessorMap(key string, processor thrift.TProcessorFunction) {"
         << endl;
@@ -2688,23 +2688,23 @@ void t_go_generator::generate_service_server(t_service *tservice) {
         << "Processor) ProcessorMap() map[string]thrift.TProcessorFunction {" << endl;
         f_types_ << indent() << "  return p.processorMap" << endl;
         f_types_ << indent() << "}" << endl << endl;
-        f_types_ << indent() << "func New" << serviceName << "Processor(handler " << serviceName
+        f_types_model_ << indent() << "func New" << serviceName << "Processor(handler " << serviceName
         << ") *" << serviceName << "Processor {" << endl << endl;
-        f_types_
+        f_types_model_
         << indent() << "  " << self << " := &" << serviceName
         << "Processor{handler:handler, processorMap:make(map[string]thrift.TProcessorFunction)}"
         << endl;
 
         for (f_iter = functions.begin(); f_iter != functions.end(); ++f_iter) {
             string escapedFuncName(escape_string((*f_iter)->get_name()));
-            f_types_ << indent() << "  " << self << ".processorMap[\"" << escapedFuncName << "\"] = &"
+            f_types_model_ << indent() << "  " << self << ".processorMap[\"" << escapedFuncName << "\"] = &"
             << pServiceName << "Processor" << publicize((*f_iter)->get_name())
             << "{handler:handler}" << endl;
         }
 
         string x(tmp("x"));
-        f_types_ << indent() << "return " << self << endl;
-        f_types_ << indent() << "}" << endl << endl;
+        f_types_model_ << indent() << "return " << self << endl;
+        f_types_model_ << indent() << "}" << endl << endl;
         f_types_ << indent() << "func (p *" << serviceName
         << "Processor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err "
             "thrift.TException) {" << endl;
@@ -2726,23 +2726,23 @@ void t_go_generator::generate_service_server(t_service *tservice) {
         f_types_ << indent() << "" << endl;
         f_types_ << indent() << "}" << endl << endl;
     } else {
-        f_types_ << indent() << "type " << serviceName << "Processor struct {" << endl;
-        f_types_ << indent() << "  *" << extends_processor << endl;
-        f_types_ << indent() << "}" << endl << endl;
-        f_types_ << indent() << "func New" << serviceName << "Processor(handler " << serviceName
+        f_types_model_ << indent() << "type " << serviceName << "Processor struct {" << endl;
+        f_types_model_ << indent() << "  *" << extends_processor << endl;
+        f_types_model_ << indent() << "}" << endl << endl;
+        f_types_model_ << indent() << "func New" << serviceName << "Processor(handler " << serviceName
         << ") *" << serviceName << "Processor {" << endl;
-        f_types_ << indent() << "  " << self << " := &" << serviceName << "Processor{"
+        f_types_model_ << indent() << "  " << self << " := &" << serviceName << "Processor{"
         << extends_processor_new << "(handler)}" << endl;
 
         for (f_iter = functions.begin(); f_iter != functions.end(); ++f_iter) {
             string escapedFuncName(escape_string((*f_iter)->get_name()));
-            f_types_ << indent() << "  " << self << ".AddToProcessorMap(\"" << escapedFuncName
+            f_types_model_ << indent() << "  " << self << ".AddToProcessorMap(\"" << escapedFuncName
             << "\", &" << pServiceName << "Processor" << publicize((*f_iter)->get_name())
             << "{handler:handler})" << endl;
         }
 
-        f_types_ << indent() << "  return " << self << endl;
-        f_types_ << indent() << "}" << endl << endl;
+        f_types_model_ << indent() << "  return " << self << endl;
+        f_types_model_ << indent() << "}" << endl << endl;
     }
 
     // Generate the process subfunctions
