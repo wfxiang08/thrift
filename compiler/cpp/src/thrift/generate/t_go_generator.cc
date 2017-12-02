@@ -1902,12 +1902,17 @@ void t_go_generator::generate_service_client(t_service *tservice) {
     extends_field = extends_client.substr(extends_client.find(".") + 1);
 
     generate_go_docstring(f_types_, tservice);
+
+    // 创建Client的代码
     f_types_model_ << indent() << "type " << serviceName << "Client struct {" << endl;
     indent_up();
 
     if (!extends_client.empty()) {
+        // 1. 如果Client扩展了其他的Client, 那么就直接添加一个基类的指针
         f_types_model_ << indent() << "*" << extends_client << endl;
     } else {
+        // Base Class
+        f_types_model_ << indent() << "AsyncCall bool // 是否支持异步调用" << endl;
         f_types_model_ << indent() << "Transport thrift.TTransport" << endl;
         f_types_model_ << indent() << "ProtocolFactory thrift.TProtocolFactory" << endl;
         f_types_model_ << indent() << "InputProtocol thrift.TProtocol" << endl;
@@ -1989,7 +1994,16 @@ void t_go_generator::generate_service_client(t_service *tservice) {
         indent() << "p.Reqs[p.SeqId] = d" << endl;
     }
     */
-        f_types_ << indent() << "if err = p.send" << funname << "(";
+//        var protocol thrift.TProtocol
+//        if p.Async {
+//            protocol = p.ProtocolFactory.GetProtocol(p.Transport)
+//        }
+        f_types_ << indent() << "var protocol thrift.TProtocol" << endl;
+        f_types_ << indent() << "if p.Async {" << endl;
+        f_types_ << indent() << "    protocol = p.ProtocolFactory.GetProtocol(p.Transport)" << endl;
+        f_types_ << indent() << "}" << endl;
+
+        f_types_ << indent() << "if err = p.send" << funname << "(protocol, ";
         bool first = true;
 
         for (fld_iter = fields.begin(); fld_iter != fields.end(); ++fld_iter) {
@@ -2005,27 +2019,38 @@ void t_go_generator::generate_service_client(t_service *tservice) {
         f_types_ << "); err != nil { return }" << endl;
 
         if (!(*f_iter)->is_oneway()) {
-            f_types_ << indent() << "return p.recv" << funname << "()" << endl;
+            f_types_ << indent() << "return p.recv" << funname << "(protocol)" << endl;
         } else {
             f_types_ << indent() << "return" << endl;
         }
 
         indent_down();
         f_types_ << indent() << "}" << endl << endl;
+
+        // 类似: func (p *SongServiceClient) sendDailyRecommend(protocol *thrift.TBinaryProtocol, newDailyRecommendReq *DailyRecommendReq) (err error)
+        //
         f_types_ << indent() << "func (p *" << serviceName << "Client) send"
-        << function_signature(*f_iter) << "(err error) {" << endl;
+                 << function_signature(*f_iter) << "(err error) {" << endl;
         indent_up();
         std::string argsname = publicize((*f_iter)->get_name() + "_args", true);
+
         // Serialize the request header
-        f_types_ << indent() << "oprot := p.OutputProtocol" << endl;
-        f_types_ << indent() << "if oprot == nil {" << endl;
-        f_types_ << indent() << "  oprot = p.ProtocolFactory.GetProtocol(p.Transport)" << endl;
-        f_types_ << indent() << "  p.OutputProtocol = oprot" << endl;
+        f_types_ << indent() << "var oprot thrift.TProtocol" << endl;
+        f_types_ << indent() << "if protocol != nil {" << endl;
+        f_types_ << indent() << "    oprot = protocol" << endl;
+        f_types_ << indent() << "} else {" << endl;
+        f_types_ << indent() << "    oprot = p.OutputProtocol" << endl;
+        f_types_ << indent() << "    if oprot == nil {" << endl;
+        f_types_ << indent() << "        oprot = p.ProtocolFactory.GetProtocol(p.Transport)" << endl;
+        f_types_ << indent() << "        p.OutputProtocol = oprot" << endl;
+        f_types_ << indent() << "    }" << endl;
         f_types_ << indent() << "}" << endl;
+
+
         f_types_ << indent() << "p.SeqId++" << endl;
         f_types_ << indent() << "if err = oprot.WriteMessageBegin(\"" << (*f_iter)->get_name()
-        << "\", " << ((*f_iter)->is_oneway() ? "thrift.ONEWAY" : "thrift.CALL")
-        << ", p.SeqId); err != nil {" << endl;
+                << "\", " << ((*f_iter)->is_oneway() ? "thrift.ONEWAY" : "thrift.CALL")
+                << ", p.SeqId); err != nil {" << endl;
         indent_up();
         f_types_ << indent() << "  return" << endl;
         indent_down();
@@ -2057,7 +2082,7 @@ void t_go_generator::generate_service_client(t_service *tservice) {
             std::string resultname = publicize((*f_iter)->get_name() + "_result", true);
             // Open function
             f_types_ << endl << indent() << "func (p *" << serviceName << "Client) recv"
-            << publicize((*f_iter)->get_name()) << "() (";
+                     << publicize((*f_iter)->get_name()) << "(protocol *thrift.Protocol) (";
 
             if (!(*f_iter)->get_returntype()->is_void()) {
                 f_types_ << "value " << type_to_go_type((*f_iter)->get_returntype()) << ", ";
@@ -2068,11 +2093,19 @@ void t_go_generator::generate_service_client(t_service *tservice) {
             // TODO(mcslee): Validate message reply here, seq ids etc.
             string error(tmp("error"));
             string error2(tmp("error"));
-            f_types_ << indent() << "iprot := p.InputProtocol" << endl;
-            f_types_ << indent() << "if iprot == nil {" << endl;
-            f_types_ << indent() << "  iprot = p.ProtocolFactory.GetProtocol(p.Transport)" << endl;
-            f_types_ << indent() << "  p.InputProtocol = iprot" << endl;
+
+            // Serialize the request header
+            f_types_ << indent() << "var iprot thrift.TProtocol" << endl;
+            f_types_ << indent() << "if protocol != nil {" << endl;
+            f_types_ << indent() << "    iprot = protocol" << endl;
+            f_types_ << indent() << "} else {" << endl;
+            f_types_ << indent() << "    iprot = p.InputProtocol" << endl;
+            f_types_ << indent() << "    if iprot == nil {" << endl;
+            f_types_ << indent() << "        iprot = p.ProtocolFactory.GetProtocol(p.Transport)" << endl;
+            f_types_ << indent() << "        p.InputProtocol = iprot" << endl;
+            f_types_ << indent() << "    }" << endl;
             f_types_ << indent() << "}" << endl;
+
             f_types_ << indent() << "method, mTypeId, seqId, err := iprot.ReadMessageBegin()" << endl;
             f_types_ << indent() << "if err != nil {" << endl;
             f_types_ << indent() << "  return" << endl;
@@ -3464,7 +3497,10 @@ string t_go_generator::render_field_initial_value(t_field *tfield,
  */
 string t_go_generator::function_signature(t_function *tfunction, string prefix) {
     // TODO(mcslee): Nitpicky, no ',' if argument_list is empty
-    return publicize(prefix + tfunction->get_name()) + "(" + argument_list(tfunction->get_arglist())
+    // 只有一个地方使用, 类似:
+    // sendDailyRecommend(protocol *thrift.Protocol, newDailyRecommendReq *DailyRecommendReq) (err error)
+    // protocol *thrift.Protocol,
+    return publicize(prefix + tfunction->get_name()) + "(protocol *thrift.Protocol," + argument_list(tfunction->get_arglist())
            + ")";
 }
 
