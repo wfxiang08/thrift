@@ -1912,7 +1912,7 @@ void t_go_generator::generate_service_client(t_service *tservice) {
         f_types_model_ << indent() << "*" << extends_client << endl;
     } else {
         // Base Class
-        f_types_model_ << indent() << "AsyncCall bool // 是否支持异步调用" << endl;
+        f_types_model_ << indent() << "AsyncCall bool // Support Async Call" << endl;
         f_types_model_ << indent() << "Transport thrift.TTransport" << endl;
         f_types_model_ << indent() << "ProtocolFactory thrift.TProtocolFactory" << endl;
         f_types_model_ << indent() << "InputProtocol thrift.TProtocol" << endl;
@@ -1999,7 +1999,7 @@ void t_go_generator::generate_service_client(t_service *tservice) {
 //            protocol = p.ProtocolFactory.GetProtocol(p.Transport)
 //        }
         f_types_ << indent() << "var protocol thrift.TProtocol" << endl;
-        f_types_ << indent() << "if p.Async {" << endl;
+        f_types_ << indent() << "if p.AsyncCall {" << endl;
         f_types_ << indent() << "    protocol = p.ProtocolFactory.GetProtocol(p.Transport)" << endl;
         f_types_ << indent() << "}" << endl;
 
@@ -2082,7 +2082,7 @@ void t_go_generator::generate_service_client(t_service *tservice) {
             std::string resultname = publicize((*f_iter)->get_name() + "_result", true);
             // Open function
             f_types_ << endl << indent() << "func (p *" << serviceName << "Client) recv"
-                     << publicize((*f_iter)->get_name()) << "(protocol *thrift.Protocol) (";
+                     << publicize((*f_iter)->get_name()) << "(protocol thrift.Protocol) (";
 
             if (!(*f_iter)->get_returntype()->is_void()) {
                 f_types_ << "value " << type_to_go_type((*f_iter)->get_returntype()) << ", ";
@@ -3500,7 +3500,7 @@ string t_go_generator::function_signature(t_function *tfunction, string prefix) 
     // 只有一个地方使用, 类似:
     // sendDailyRecommend(protocol *thrift.Protocol, newDailyRecommendReq *DailyRecommendReq) (err error)
     // protocol *thrift.Protocol,
-    return publicize(prefix + tfunction->get_name()) + "(protocol *thrift.Protocol," + argument_list(tfunction->get_arglist())
+    return publicize(prefix + tfunction->get_name()) + "(protocol thrift.Protocol," + argument_list(tfunction->get_arglist())
            + ")";
 }
 
