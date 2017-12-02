@@ -2082,7 +2082,7 @@ void t_go_generator::generate_service_client(t_service *tservice) {
             std::string resultname = publicize((*f_iter)->get_name() + "_result", true);
             // Open function
             f_types_ << endl << indent() << "func (p *" << serviceName << "Client) recv"
-                     << publicize((*f_iter)->get_name()) << "(protocol thrift.Protocol) (";
+                     << publicize((*f_iter)->get_name()) << "(protocol thrift.TProtocol) (";
 
             if (!(*f_iter)->get_returntype()->is_void()) {
                 f_types_ << "value " << type_to_go_type((*f_iter)->get_returntype()) << ", ";
@@ -3498,9 +3498,8 @@ string t_go_generator::render_field_initial_value(t_field *tfield,
 string t_go_generator::function_signature(t_function *tfunction, string prefix) {
     // TODO(mcslee): Nitpicky, no ',' if argument_list is empty
     // 只有一个地方使用, 类似:
-    // sendDailyRecommend(protocol *thrift.Protocol, newDailyRecommendReq *DailyRecommendReq) (err error)
-    // protocol *thrift.Protocol,
-    return publicize(prefix + tfunction->get_name()) + "(protocol thrift.Protocol," + argument_list(tfunction->get_arglist())
+    // sendDailyRecommend(protocol thrift.TProtocol, newDailyRecommendReq *DailyRecommendReq) (err error)
+    return publicize(prefix + tfunction->get_name()) + "(protocol thrift.TProtocol," + argument_list(tfunction->get_arglist())
            + ")";
 }
 
