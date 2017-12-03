@@ -1864,6 +1864,7 @@ void t_go_generator::generate_service_interface(t_service *tservice) {
 
         for (f_iter = functions.begin(); f_iter != functions.end(); ++f_iter) {
             generate_go_docstring(f_types_model_, (*f_iter));
+            // golang接口签名，变量名需要是camelcase格式
             f_types_model_ << indent() << function_signature_if(*f_iter, "", true) << endl;
         }
     }
@@ -1997,10 +1998,12 @@ void t_go_generator::generate_service_client(t_service *tservice) {
 //        var protocol thrift.TProtocol
 //        if p.Async {
 //            protocol = p.ProtocolFactory.GetProtocol(p.Transport)
+//            defer protocol.Transport().Close()
 //        }
         f_types_ << indent() << "var protocol thrift.TProtocol" << endl;
         f_types_ << indent() << "if p.AsyncCall {" << endl;
         f_types_ << indent() << "    protocol = p.ProtocolFactory.GetProtocol(p.Transport)" << endl;
+        f_types_ << indent() << "    defer protocol.Transport().Close()" << endl;
         f_types_ << indent() << "}" << endl;
 
         f_types_ << indent() << "if err = p.send" << funname << "(protocol, ";
@@ -2013,7 +2016,8 @@ void t_go_generator::generate_service_client(t_service *tservice) {
                 f_types_ << ", ";
             }
 
-            f_types_ << variable_name_to_go_name((*fld_iter)->get_name());
+
+            f_types_ << camelcase(variable_name_to_go_name((*fld_iter)->get_name()));
         }
 
         f_types_ << "); err != nil { return }" << endl;
@@ -2059,7 +2063,7 @@ void t_go_generator::generate_service_client(t_service *tservice) {
 
         for (fld_iter = fields.begin(); fld_iter != fields.end(); ++fld_iter) {
             f_types_ << indent() << publicize((*fld_iter)->get_name()) << " : "
-            << variable_name_to_go_name((*fld_iter)->get_name()) << "," << endl;
+            << camelcase(variable_name_to_go_name((*fld_iter)->get_name())) << "," << endl;
         }
         f_types_ << indent() << "}" << endl;
 
@@ -2116,7 +2120,8 @@ void t_go_generator::generate_service_client(t_service *tservice) {
             << " failed: wrong method name\")" << endl;
             f_types_ << indent() << "  return" << endl;
             f_types_ << indent() << "}" << endl;
-            f_types_ << indent() << "if p.SeqId != seqId {" << endl;
+            f_types_ << indent() << "// protocol == nil non-async call mode, seqId is valid" << endl;
+            f_types_ << indent() << "if protocol == nil && p.SeqId != seqId {" << endl;
             f_types_ << indent() << "  err = thrift.NewTApplicationException("
             << "thrift.BAD_SEQUENCE_ID, \"" << (*f_iter)->get_name()
             << " failed: out of sequence response\")" << endl;
@@ -3510,10 +3515,13 @@ string t_go_generator::function_signature(t_function *tfunction, string prefix) 
  * @return String of rendered function definition
  */
 string t_go_generator::function_signature_if(t_function *tfunction, string prefix, bool addError) {
+    // 生成"接口"的签名
     // TODO(mcslee): Nitpicky, no ',' if argument_list is empty
     string signature = publicize(prefix + tfunction->get_name()) + "(";
     signature += "ctx context.Context, ";
+
     signature += argument_list(tfunction->get_arglist()) + ") (";
+
     t_type *ret = tfunction->get_returntype();
     t_struct *exceptions = tfunction->get_xceptions();
     string errs = argument_list(exceptions);
@@ -3549,8 +3557,9 @@ string t_go_generator::argument_list(t_struct *tstruct) {
         } else {
             result += ", ";
         }
-
-        result += variable_name_to_go_name((*f_iter)->get_name()) + " "
+        string variable_name = camelcase(variable_name_to_go_name((*f_iter)->get_name()));
+        // hello_world --> helloWorld golang style
+        result += variable_name + " "
                   + type_to_go_type((*f_iter)->get_type());
     }
 
